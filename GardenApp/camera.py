@@ -7,7 +7,7 @@ import cv2
 from datetime import datetime, timedelta
 
 camera = PiCamera()
-videoFormat = ".mov"
+videoFormat = ".mp4"
 timelapseDirectory = "/home/pi/Pictures/Timelapse/"
 allTimelapsePhotos = '/home/pi/Pictures/Timelapse/*.jpg'
 liveImageLocation = "/home/pi/Pictures/Live/LiveImage.jpg"
@@ -18,14 +18,20 @@ camera.resolution = (1920, 1080)
 
 def stopTimelapse(timelapseTime,fps): #previous third parameter photoCount
     try:
+        
         timelapseVideo = f"/home/pi/Videos/{timelapseTime}{videoFormat}"
         images = [img for img in sorted(os.listdir(timelapseDirectory)) if img.endswith("jpg")]
-        
+        print(f"Images length: {len(images)}")
         frame = cv2.imread(os.path.join(timelapseDirectory,images[0]))
         height, width, layers = frame.shape
-        video = cv2.VideoWriter(timelapseVideo, 0, fps,(width, height))
+        fourcc = cv2.VideoWriter_fourcc(*'h264')
+        video = cv2.VideoWriter(timelapseVideo, fourcc, fps,(width, height))
+        lock.acquire()
+        utility.updateDb("/control",{'timelapseSwitch': 0})
+        lock.release()
         
         for image in images:
+            print("Adding image to video")
             video.write(cv2.imread(os.path.join(timelapseDirectory,image)))
         cv2.destroyAllWindows()
         video.release()
@@ -37,15 +43,16 @@ def stopTimelapse(timelapseTime,fps): #previous third parameter photoCount
 
         #os.system(f'ffmpeg -f image2 -framerate {fps} -loglevel 0 -s 1920x1080 -pattern_type glob -i "/home/pi/Pictures/Timelapse/[0-{photoCount}].jpg" -vcodec libx264 -crf 25  -pix_fmt yuv420p {timelapseVideo}')
         #print('Finished ffmpeg command')
-        os.environ['TimelapseKeepAlive'] = 'True'
-        os.environ['TimelapseRunning'] = 'False'
+
         sleep(4)
         lock.acquire()
         utility.pushToStorage(f'/Timelapses/{timelapseTime}{videoFormat}', timelapseVideo)
         utility.updateDb('/control/', {'timelapseSwitch':0})
         lock.release()
-        utility.deleteFiles("/home/pi/Videos/")
+        utility.deleteFiles("/home/pi/Videos/*")
         utility.deleteFiles(allTimelapsePhotos)
+        os.environ['TimelapseKeepAlive'] = 'True'
+        os.environ['TimelapseRunning'] = 'False'
         
     except Exception as e:
         print(f'Timelapse stopping catch block reached: {e}\n')
