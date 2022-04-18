@@ -7,6 +7,7 @@ import cv2
 from datetime import datetime, timedelta
 
 camera = PiCamera()
+videoFormat = ".mov"
 timelapseDirectory = "/home/pi/Pictures/Timelapse/"
 allTimelapsePhotos = '/home/pi/Pictures/Timelapse/*.jpg'
 liveImageLocation = "/home/pi/Pictures/Live/LiveImage.jpg"
@@ -17,8 +18,8 @@ camera.resolution = (1920, 1080)
 
 def stopTimelapse(timelapseTime,fps): #previous third parameter photoCount
     try:
-        timelapseVideo = f"/home/pi/Videos/{timelapseTime}.mp4"
-        images = [img for img in os.listdir(timelapseDirectory) if img.endswith("jpg")]
+        timelapseVideo = f"/home/pi/Videos/{timelapseTime}{videoFormat}"
+        images = [img for img in sorted(os.listdir(timelapseDirectory)) if img.endswith("jpg")]
         
         frame = cv2.imread(os.path.join(timelapseDirectory,images[0]))
         height, width, layers = frame.shape
@@ -40,14 +41,15 @@ def stopTimelapse(timelapseTime,fps): #previous third parameter photoCount
         os.environ['TimelapseRunning'] = 'False'
         sleep(4)
         lock.acquire()
-        utility.pushToStorage(f'/Timelapses/{timelapseTime}.mp4', timelapseVideo)
+        utility.pushToStorage(f'/Timelapses/{timelapseTime}{videoFormat}', timelapseVideo)
         utility.updateDb('/control/', {'timelapseSwitch':0})
         lock.release()
         utility.deleteFiles("/home/pi/Videos/")
+        utility.deleteFiles(allTimelapsePhotos)
         
     except Exception as e:
         print(f'Timelapse stopping catch block reached: {e}\n')
-        errorMessage = f"{utility.getTime()}: stopTimelapse Function Error: {e}\n"
+        errorMessage = f"stopTimelapse Function Error: {e}"
         utility.appendToLog("error",errorMessage)
     
 def startTimelapse(length,fps, interval):
@@ -57,6 +59,8 @@ def startTimelapse(length,fps, interval):
         currentTime = datetime.now()
         endTime = currentTime + timedelta(minutes=length)
         photosToTake = int((length*60)/interval) #number of photos to take
+        estimatedStorageRequired = photosToTake * 1.1
+        print(f"Estimated storage required: {estimatedStorageRequired}MB")
         print(f"Number of photos to take = {photosToTake}\n")
         pictureCount = utility.countFiles(timelapseDirectory)
         print(f'Number of photos: {pictureCount}\n')
@@ -67,19 +71,21 @@ def startTimelapse(length,fps, interval):
         
         startTime = utility.getTime()
         print(f'Starting timelapse at {startTime}\n')
+        count = 0
         while datetime.now() < endTime:
             megabytesAvailable = utility.getAvailableSpace()
             print(f'Storage space left: {megabytesAvailable}MB\n')
-            if os.environ['TimelapseKeepAlive'] == 'False' or megabytesAvailable <= 20:
+            if os.environ['TimelapseKeepAlive'] == 'False' or megabytesAvailable <= estimatedStorageRequired:
                 print('Timelapse loop breaking\n')
                 break
             while float(os.environ['light']) < 40:
                 print(f"Light level too low: {os.environ['light']}\n")
                 sleep(3)
+            count += 1
             lock.acquire()
             print(f'{count} out of {photosToTake} photos taken\n')
             camera.annotate_text = utility.getEnvStats()
-            camera.capture(f'{timelapseDirectory}{count}.jpg')
+            camera.capture(f'{timelapseDirectory}{utility.getTime()}.jpg')
             lock.release()
             sleep(interval)
         print('Timelapse photos completed\n')
@@ -88,7 +94,7 @@ def startTimelapse(length,fps, interval):
         stopTimelapse(startTime,fps)
     except Exception as e:
         print(f'Timelapse catch block reached: {e}\n')
-        errorMessage = f"{utility.getTime()}: Timelapse Function Error: {e}\n"
+        errorMessage = f"Timelapse Function Error: {e}"
         utility.appendToLog("error",errorMessage)
 
 def liveViewCapture():
@@ -104,7 +110,7 @@ def liveViewCapture():
             sleep(3)
     except Exception as e:
         print(f'Live view catch block reached: {e}\n')
-        errorMessage = f"{utility.getTime()}: Live view Function Error: {e}\n"
+        errorMessage = f"Live view Function Error: {e}"
         utility.appendToLog("error",errorMessage)
         liveThread = threading.Thread(target=liveViewCapture,args=())#Restart the live view of plants
         liveThread.start()

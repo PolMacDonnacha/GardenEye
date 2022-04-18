@@ -26,7 +26,7 @@ def getAvailableSpace():
         
 def appendToLog(file,message):
     with open(f'{file}.log',"a") as log_file:
-        log_file.write(message)
+        log_file.write(f"{getTime()}: {message}\n")
         
 def appendToCsv(file,message):
     with open(f'{file}.csv',"a") as csv_file:

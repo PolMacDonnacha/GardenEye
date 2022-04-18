@@ -36,6 +36,7 @@ def timelapseStart(timelapseLength,timelapseFps,timelapseInterval):
     os.environ['TimelapseRunning'] = 'True'#Set the timelapse status as running
     os.environ['TimelapseKeepAlive'] = 'True'#This line keeps the timelapse running, if the user wants to end a timelapse early, this is set to False
     print('Timelapse thread created')
+    utility.appendToLog("thread","Starting timelapse thread")
     timelapseThread.start()#start the timelapse thread
     
 def startSystem():
@@ -75,6 +76,8 @@ def startSystem():
             #temperature,humidity = temp.getReading()
             if os.environ['DHT'] != 'Active':
                 tempThread = threading.Thread(target=temp.getReading,args=())
+                print("Starting temperature thread")
+                utility.appendToLog("thread","Starting temperature thread")
                 tempThread.start()
             #isDry = moisture.isDry()
             soilMoisture = moisture.getSoilMoisture()
@@ -82,6 +85,7 @@ def startSystem():
             
             if soilMoisture < idealSoilMoisture and autoPump is 1 and os.environ['Pump'] != 'Active':
                 pumpThread = threading.Thread(target=pump.runPump,args=(pumpTime,))
+                utility.appendToLog("thread","Starting pump thread")
                 pumpThread.start()
             # If automatic controls are off, check switch columns
             elif autoPump is 0: 
@@ -93,6 +97,7 @@ def startSystem():
             
             if float(os.environ['Temperature']) > maxTemp and autoCool is 1 and os.environ['Fan'] != 'Active':
                 fanThread = threading.Thread(target=fan.runFan,args=(fanTime,))
+                utility.appendToLog("thread","Starting fan thread")
                 fanThread.start()
             elif autoCool is 0:
                 if fanSwitch is 1:
@@ -122,7 +127,7 @@ def startSystem():
             time.sleep(refreshInterval)
         except Exception as e:
             print(f'Catch block reached: {e}')
-            errorMessage = f"{utility.getTime()}: Master Function Error: {e}\n"
+            errorMessage = f"Master Function Error: {e}"
             utility.appendToLog("error",errorMessage)
             pump.pumpOff()
             fan.fanOff()
@@ -133,8 +138,10 @@ def main():
     #print(f"Plot items: {plotItems}")
     os.environ['WateredTime'] =utility.readDb("/plot")["timeWatered"]#Initialize
     sysThread = threading.Thread(target=startSystem,args=())#Start the system
+    utility.appendToLog("thread","Starting main thread")
     sysThread.start()
     liveThread = threading.Thread(target=camera.liveViewCapture,args=())#Start the live view of plants
+    utility.appendToLog("thread","Starting live view thread")
     liveThread.start()
     
 
