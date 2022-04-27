@@ -115,9 +115,8 @@ def liveViewCapture():
             utility.pushToStorage('liveImage.jpg',liveImageLocation)
             lock.release()
             sleep(3)
-    except Exception as e:
-        print(f'Live view catch block reached: {e}\n')
-        errorMessage = f"Live view Function Error: {e}"
-        utility.appendToLog("error",errorMessage)
-        liveThread = threading.Thread(target=liveViewCapture,args=())#Restart the live view of plants
-        liveThread.start()
+    except Exception as e:      
+            print(f'Live view catch block reached: {e}\n')
+            errorMessage = f"Live view Function Error: {e}"
+            utility.appendToLog("error",errorMessage)
+            pass

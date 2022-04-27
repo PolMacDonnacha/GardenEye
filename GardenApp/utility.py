@@ -25,7 +25,7 @@ def getAvailableSpace():
     return available_megabytes
         
 def appendToLog(file,message):
-    with open(f'{file}.log',"a") as log_file:
+    with open(f'{file}.txt',"a") as log_file:
         log_file.write(f"{getTime()}: {message}\n")
         
 def appendToCsv(file,message):
@@ -56,13 +56,14 @@ def readDb(ref):
         #print(items)
         return items
     except Exception as e:
+        print('Failed to read database, using backup data')
         errorMessage = f"{getTime()}: Database Read Error: {e}\n"
         appendToLog("error",errorMessage)
         os.environ['usingBackupData'] = 'true'
         backupItems = {}
         backupItems['autoCool'] = 1
         backupItems['autoPump'] = 1
-        backupItems['autoTimelapse'] = 1
+        backupItems['autoTimelapse'] = 0
         backupItems['timelapseFps'] = 40
         backupItems['timelapseInterval'] = 86400
         backupItems['timelapseSwitch'] = 0
@@ -74,6 +75,8 @@ def readDb(ref):
         backupItems['pumpTime'] = 120
         backupItems['refreshInterval'] = 3
         backupItems['idealSoilMoisture'] = 40
+        os.environ['TimelapseKeepAlive'] = 'True'
+        os.environ['TimelapseRunning'] = 'False'
         appendToLog("error","Returning backup data")
         return backupItems
         

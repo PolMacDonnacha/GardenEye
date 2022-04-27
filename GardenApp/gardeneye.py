@@ -42,6 +42,9 @@ def timelapseStart(timelapseLength,timelapseFps,timelapseInterval):
 def startSystem():
     os.environ['TimelapseRunning'] = 'False'
     print('starting')
+    liveThread = threading.Thread(target=camera.liveViewCapture,args=())#Start the live view of plants
+    utility.appendToLog("thread","Starting live view thread")
+    liveThread.start()
     while True:
         try:
             controlItems = utility.readDb('/control/')
@@ -62,23 +65,27 @@ def startSystem():
             #print('autoCool: ', autoCool)
             #print('autoPump: ', autoPump)
             #print('autoTimelapse: ', autoTimelapse)
-            print('timelapseSwitch: ', timelapseSwitch)
+            #print('timelapseSwitch: ', timelapseSwitch)
             #print('timelapseInterval: ', timelapseInterval)
             #print('timelapseFps: ', timelapseFps)
             print(f"TimelapseRunning: {os.environ['TimelapseRunning']}")
-            print('timelapseLength: ', timelapseLength)
+            #print('timelapseLength: ', timelapseLength)
             #print('fanSwitch: ', fanSwitch)
             #print('fanTime: ', fanTime)
             #print('maxTemp: ', maxTemp)
             #print('pumpSwitch: ', pumpSwitch)
             #print('pumpTime: ', pumpTime)
-            
+            print(f"liveThread.isAlive(): {liveThread.isAlive()}")
+           # if not liveThread.isAlive():
+           #     utility.appendToLog("thread","Starting live view thread")
+           #     liveThread.join()
+           #     liveThread.start()#Restart the live view of plants
+                
             #temperature,humidity = temp.getReading()
             if os.environ['DHT'] != 'Active':
                 tempThread = threading.Thread(target=temp.getReading,args=())
-                print("Starting temperature thread")
-                utility.appendToLog("thread","Starting temperature thread")
                 tempThread.start()
+                
             #isDry = moisture.isDry()
             soilMoisture = moisture.getSoilMoisture()
             lightLevel = light.measureLight()
@@ -140,9 +147,7 @@ def main():
     sysThread = threading.Thread(target=startSystem,args=())#Start the system
     utility.appendToLog("thread","Starting main thread")
     sysThread.start()
-    liveThread = threading.Thread(target=camera.liveViewCapture,args=())#Start the live view of plants
-    utility.appendToLog("thread","Starting live view thread")
-    liveThread.start()
+    
     
 
 def autoCoolOn():
